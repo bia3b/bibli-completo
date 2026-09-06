@@ -453,42 +453,48 @@ function deleteBook(book){
 }
 
 /* ===================== CRUD: EMPRÉSTIMOS ===================== */
-function openLoanForm(){
+function openLoanForm(existing){
   if(!isAdmin()) return;
-  const disponiveis = state.books.filter(b=>!b.pkEmprestimo && bookStatus(b)==='disponivel');
+  const isEdit = !!existing;
+  const disponiveis = state.books.filter(b=>!b.pkEmprestimo && bookStatus(b)==='disponivel' || (isEdit && b.id===existing.bookId));
   if(disponiveis.length===0){ toast('Não há livros disponíveis para empréstimo.','error'); return; }
+  const currentBook = bookById(existing?.bookId) || disponiveis[0];
   openModal({
-    title:'Novo empréstimo',
+    title: isEdit ? 'Editar empréstimo' : 'Novo empréstimo',
     bodyHtml: `
       <div class="form-grid">
         <div class="form-group full">
           <label>Livro</label>
-          <select id="f-emp-book">${disponiveis.map(b=>`<option value="${b.id}" data-author="${escapeHtml(b.author)}">${escapeHtml(b.title)}</option>`).join('')}</select>
+          <select id="f-emp-book">${disponiveis.map(b=>`<option value="${b.id}" data-author="${escapeHtml(b.author)}" ${b.id===currentBook.id?'selected':''}>${escapeHtml(b.title)}</option>`).join('')}</select>
         </div>
-        <div class="form-group full"><label>Autores</label><input id="f-emp-authors" value="${escapeHtml(disponiveis[0].author||'')}"></div>
-        <div class="form-group"><label>Data_pegou</label><input id="f-emp-pegou" type="date" value="${todayISO()}"></div>
-        <div class="form-group"><label>Data_devolucao (opcional)</label><input id="f-emp-devolucao" type="date"></div>
-        <div class="form-group"><label>Sala</label><input id="f-emp-sala" placeholder="Ex: 9º A"></div>
-        <div class="form-group"><label>Quantd.Livro</label><input id="f-emp-qtd" type="number" min="1" value="1"></div>
+        <div class="form-group full"><label>Autores</label><input id="f-emp-authors" value="${escapeHtml(existing?.authors || currentBook.author || '')}"></div>
+        <div class="form-group"><label>Data_pegou</label><input id="f-emp-pegou" type="date" value="${existing?.pickupDate || todayISO()}"></div>
+        <div class="form-group"><label>Data_devolucao (opcional)</label><input id="f-emp-devolucao" type="date" value="${existing?.returnDate || ''}"></div>
+        <div class="form-group"><label>Sala</label><input id="f-emp-sala" placeholder="Ex: 9º A" value="${escapeHtml(existing?.room || '')}"></div>
+        <div class="form-group"><label>Quantd.Livro</label><input id="f-emp-qtd" type="number" min="1" value="${existing?.quantity || 1}"></div>
       </div>`,
     footButtons: [
       {label:'Cancelar', cls:'btn-ghost', onClick: closeModal},
-      {label:'Confirmar empréstimo', cls:'btn-primary', onClick: ()=>{
+      {label: isEdit ? 'Salvar alterações' : 'Confirmar empréstimo', cls:'btn-primary', onClick: ()=>{
         const bookId = $('#f-emp-book').value;
         const room = $('#f-emp-sala').value.trim();
         const quantity = parseInt($('#f-emp-qtd').value)||1;
         if(!room){ toast('Informe a sala.','error'); return; }
-        const loan = {
-          id: uid('emp'), bookId, authors: $('#f-emp-authors').value.trim(),
+        const data = {
+          bookId, authors: $('#f-emp-authors').value.trim(),
           pickupDate: $('#f-emp-pegou').value || todayISO(),
           returnDate: $('#f-emp-devolucao').value || null,
           room, quantity
         };
-        state.loans.push(loan);
+        const loan = existing || { id: uid('emp'), ...data };
+        if(existing){
+          const oldBook = bookById(existing.bookId);
+          if(oldBook && oldBook.id!==bookId){ oldBook.pkEmprestimo = null; oldBook.availability = 'disponivel'; }
+          Object.assign(existing, data);
+        } else state.loans.push(loan);
         const book = bookById(bookId);
-        book.pkEmprestimo = loan.id;
-        book.availability = 'emprestado';
-        saveState(); toast('Empréstimo registrado.'); closeModal(); renderAll();
+        if(book){ book.pkEmprestimo = data.returnDate ? null : loan.id; book.availability = data.returnDate ? 'disponivel' : 'emprestado'; }
+        saveState(); toast(isEdit ? 'Empréstimo atualizado.' : 'Empréstimo registrado.'); closeModal(); renderAll();
       }}
     ]
   });
@@ -626,6 +632,7 @@ function renderEmprestimos(){
         <td>${l.quantity}</td>
         <td>${stampHtml}</td>
         <td class="row-actions" data-admin-only>
+          <button class="btn btn-sm" onclick="__editLoan('${l.id}')">Editar</button>
           ${!l.returnDate ? `<button class="btn btn-sm btn-primary" onclick="__returnLoan('${l.id}')">Devolver</button>` : ''}
           <button class="btn btn-sm btn-danger" onclick="__deleteLoan('${l.id}')">Excluir</button>
         </td>
@@ -636,6 +643,7 @@ function renderEmprestimos(){
   applyRoleVisibility();
 }
 window.__returnLoan = id => returnLoan(loanById(id));
+window.__editLoan = id => openLoanForm(loanById(id));
 window.__deleteLoan = id => deleteLoan(loanById(id));
 
 /* ===================== RENDER: HISTÓRICO ===================== */
