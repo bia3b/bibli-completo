@@ -186,14 +186,36 @@ $('#logoutBtn').addEventListener('click', ()=>{
   toast('Sessão de administrador encerrada.');
 });
 $('#notifBtn').addEventListener('click', ()=>{
+  const latest = latestHistoryEvent();
+  if(!latest){ toast('Nenhuma movimentação no histórico.'); return; }
+  markHistoryAsSeen(latest.signature);
   $('#notifDot').style.display = 'none';
-  toast('Nenhuma notificação nova.');
+  goSection('historico');
+  toast('Histórico aberto: ' + latest.label + '.');
 });
 
 /* ===================== DERIVADOS ===================== */
 function bookById(id){ return state.books.find(b=>b.id===id); }
 function loanById(id){ return state.loans.find(l=>l.id===id); }
 function bookStatus(book){ return book.pkEmprestimo ? 'emprestado' : (book.availability || 'disponivel'); }
+const HISTORY_SEEN_KEY = 'bmb_historico_visto_v1';
+function latestHistoryEvent(){
+  const events = [];
+  state.loans.forEach(loan=>{
+    const book = bookById(loan.bookId);
+    events.push({ date:loan.pickupDate, type:'Empréstimo', label:'novo empréstimo de ' + (book?.title||'livro'), signature:`${loan.id}:emprestimo:${loan.pickupDate}` });
+    if(loan.returnDate) events.push({ date:loan.returnDate, type:'Devolução', label:'devolução de ' + (book?.title||'livro'), signature:`${loan.id}:devolucao:${loan.returnDate}` });
+  });
+  events.sort((a,b)=>b.date.localeCompare(a.date));
+  return events[0] || null;
+}
+function markHistoryAsSeen(signature){ try{ sessionStorage.setItem(HISTORY_SEEN_KEY, signature); }catch(e){} }
+function updateNotificationIndicator(){
+  const latest = latestHistoryEvent();
+  let seen = '';
+  try{ seen = sessionStorage.getItem(HISTORY_SEEN_KEY) || ''; }catch(e){}
+  $('#notifDot').style.display = latest && latest.signature!==seen ? '' : 'none';
+}
 
 function renderHomeSearch(query=''){
   const wrap = $('#homeSearchResults');
@@ -556,6 +578,7 @@ function renderDashboard(){
       return `<div class="mini-row"><span><strong>${escapeHtml(b?b.title:'—')}</strong> — ${escapeHtml(l.room)}</span><span class="tag mono">${fmtDate(l.pickupDate)}</span></div>`;
     }).join('');
   }
+  updateNotificationIndicator();
 }
 
 /* ===================== RENDER: LIVROS ===================== */
@@ -647,6 +670,7 @@ window.__editLoan = id => openLoanForm(loanById(id));
 window.__deleteLoan = id => deleteLoan(loanById(id));
 
 /* ===================== RENDER: HISTÓRICO ===================== */
+let historicoTipo = '';
 function renderHistorico(){
   const term = ($('#historicoSearch').value||'').toLowerCase();
   const tbody = $('#historicoTbody'); tbody.innerHTML = '';
@@ -657,7 +681,10 @@ function renderHistorico(){
     if(l.returnDate) moves.push({ date:l.returnDate, tipo:'Devolução', livro:b?b.title:'—', sala:l.room, detalhe:'Livro devolvido' });
   });
   moves.sort((a,b)=> b.date.localeCompare(a.date));
-  const filtered = moves.filter(m=> !term || m.livro.toLowerCase().includes(term) || m.sala.toLowerCase().includes(term));
+  $('#hist-total').textContent = moves.length;
+  $('#hist-loans').textContent = moves.filter(m=>m.tipo==='Empréstimo').length;
+  $('#hist-returns').textContent = moves.filter(m=>m.tipo==='Devolução').length;
+  const filtered = moves.filter(m=> (!historicoTipo || m.tipo===historicoTipo) && (!term || m.livro.toLowerCase().includes(term) || m.sala.toLowerCase().includes(term)));
   if(filtered.length===0){ tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Nenhum registro encontrado.</div></td></tr>`; }
   else{
     filtered.forEach(m=>{
@@ -796,6 +823,12 @@ function renderAll(){
 $('#livrosNovoBtn').addEventListener('click', ()=>openBookForm());
 ['emprestimosSearch','emprestimosFiltroStatus'].forEach(id=> $('#'+id).addEventListener('input', renderEmprestimos));
 $('#historicoSearch').addEventListener('input', renderHistorico);
+$$('#historicoFiltros button').forEach(button=>button.addEventListener('click', ()=>{
+  historicoTipo = button.dataset.historyFilter;
+  $$('button', $('#historicoFiltros')).forEach(item=>item.classList.toggle('active', item===button));
+  $$('button', $('#historicoFiltros')).forEach(item=>item.classList.toggle('btn-ghost', item!==button));
+  renderHistorico();
+}));
 $('#cadastroSearch').addEventListener('input', renderCadastro);
 
 /* ===================== INICIALIZAÇÃO ===================== */

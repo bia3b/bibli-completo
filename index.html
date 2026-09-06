@@ -165,6 +165,16 @@
     <section class="section" id="sec-historico">
       <div class="toolbar">
         <input class="field search-field" id="historicoSearch" placeholder="Buscar no histórico...">
+        <div class="history-filters" id="historicoFiltros">
+          <button class="btn btn-sm active" data-history-filter="">Todos</button>
+          <button class="btn btn-sm btn-ghost" data-history-filter="Empréstimo">Empréstimos</button>
+          <button class="btn btn-sm btn-ghost" data-history-filter="Devolução">Devoluções</button>
+        </div>
+      </div>
+      <div class="history-summary">
+        <div><span class="eyebrow">Registros</span><strong id="hist-total">0</strong></div>
+        <div><span class="eyebrow">Empréstimos</span><strong id="hist-loans">0</strong></div>
+        <div><span class="eyebrow">Devoluções</span><strong id="hist-returns">0</strong></div>
       </div>
       <div class="table-wrap">
         <table>
