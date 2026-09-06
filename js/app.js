@@ -401,7 +401,7 @@ function openBookForm(existing){
         <div class="form-group"><label>Disponibilidade</label>
           <select id="f-bk-availability">
             <option value="disponivel" ${(existing?.availability||'disponivel')==='disponivel'?'selected':''}>Disponível</option>
-            <option value="emprestado" ${(existing?.availability||'disponivel')==='emprestado'?'selected':''}>Emprestado</option>
+            <option value="indisponivel" ${(existing?.availability||'disponivel')==='indisponivel'?'selected':''}>Não disponível</option>
           </select>
           <div class="helper">Um empréstimo ativo sempre mantém o livro como emprestado.</div>
         </div>
@@ -570,7 +570,7 @@ function renderLivros(){
   else{
     rows.forEach(b=>{
       const status = bookStatus(b);
-      const statusLabel = status==='disponivel' ? 'Disponível' : 'Emprestado';
+      const statusLabel = status==='disponivel' ? 'Disponível' : (status==='indisponivel' ? 'Não disponível' : 'Emprestado');
       tbody.innerHTML += `<tr>
         <td class="mono">${escapeHtml(b.id.slice(-6))}</td>
         <td class="book-title-cell"><div class="cover-thumb placeholder"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H12v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M12 3h6.5A1.5 1.5 0 0 1 20 4.5v15a1.5 1.5 0 0 1-1.5 1.5H12"/></svg></div>${escapeHtml(b.title)}</td>
@@ -593,8 +593,8 @@ window.__toggleBookAvailability = id => {
   const book = bookById(id);
   if(!book || !isAdmin()) return;
   if(book.pkEmprestimo){ toast('Este livro possui um empréstimo ativo. Registre a devolução para deixá-lo disponível.','error'); return; }
-  book.availability = bookStatus(book)==='disponivel' ? 'emprestado' : 'disponivel';
-  saveState(); toast(book.availability==='disponivel' ? 'Livro marcado como disponível.' : 'Livro marcado como emprestado.'); renderAll();
+  book.availability = bookStatus(book)==='disponivel' ? 'indisponivel' : 'disponivel';
+  saveState(); toast(book.availability==='disponivel' ? 'Livro marcado como disponível.' : 'Livro marcado como não disponível.'); renderAll();
 };
 window.__deleteBook = id => deleteBook(bookById(id));
 
