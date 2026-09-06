@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Gestão — Biblioteca Monsenhor Bicudo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===================== TOKENS ===================== */
+:root{
+  --kraft:        #e5d8bc;
+  --kraft-dark:   #d3c096;
+  --card:         #faf5e7;
+  --card-line:    #cbb98c;
+  --ink:          #2a231a;
+  --ink-soft:     #5c5140;
+  --green:        #17301f;
+  --green-light:  #24422c;
+  --green-pale:   #e7ede4;
+  --stamp-red:    #8c2f22;
+  --stamp-red-soft: #b5493a;
+  --brass:        #96682a;
+  --brass-light:  #c99f4f;
+  --brass-pale:   #f1e2b8;
+  --danger:       #8c2f22;
+  --ok:           #2b5c37;
+  --warn:         #96682a;
+  --radius: 4px;
+  --shadow: 0 1px 0 rgba(42,35,26,.1), 0 10px 24px -14px rgba(42,35,26,.45);
+  --shadow-soft: 0 1px 0 rgba(42,35,26,.06), 0 6px 16px -10px rgba(42,35,26,.3);
+  --font-display: 'Special Elite', 'Courier New', monospace;
+  --font-body: 'Newsreader', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family: var(--font-body);
+  background-color: var(--kraft);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 12% 8%, rgba(255,255,255,.35), transparent 45%),
+    repeating-linear-gradient(0deg, rgba(42,35,26,.025) 0px, rgba(42,35,26,.025) 1px, transparent 1px, transparent 3px);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,.display{ font-family: var(--font-display); letter-spacing:.02em; font-weight:400; }
+.mono{ font-family: var(--font-mono); }
+.eyebrow{ font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--brass); }
+::selection{ background: var(--brass-light); color:#fff; }
+a{color:inherit;}
+button{ font-family: var(--font-body); cursor:pointer; }
+input,select,textarea{ font-family: var(--font-body); }
+svg.ic{ width:1em; height:1em; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; vertical-align:-.15em; }
+:focus-visible{ outline:2px solid var(--brass); outline-offset:2px; }
+.hidden{ display:none !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:var(--kraft); }
+::-webkit-scrollbar-thumb{ background:var(--card-line); border-radius:10px; }
+
+/* ===================== APP SHELL ===================== */
+.app{ display:flex; min-height:100vh; }
+
+/* ---- Sidebar: drawer de fichário ---- */
+.sidebar{
+  width:264px; flex-shrink:0;
+  background:
+    radial-gradient(circle at 85% 0%, rgba(255,255,255,.05), transparent 55%),
+    linear-gradient(180deg, var(--green) 0%, var(--green-light) 100%);
+  color:#f2ead6;
+  display:flex; flex-direction:column;
+  position:sticky; top:0; height:100vh;
+  border-right:1px solid rgba(0,0,0,.25);
+  box-shadow: 4px 0 24px -8px rgba(0,0,0,.35);
+  z-index:40;
+}
+.brand{
+  padding:24px 20px 18px;
+  border-bottom:1px dashed rgba(242,234,214,.22);
+  display:flex; align-items:center; gap:13px;
+}
+.brand .stamp-badge{
+  flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:46px;height:46px; border-radius:50%;
+  color:var(--brass-light);
+  transform:rotate(-7deg);
+  position:relative;
+}
+.brand .stamp-badge svg{ width:46px; height:46px; }
+.brand h1{ font-size:14.5px; line-height:1.35; margin:0 0 5px; color:#f8f2e2; font-weight:400;}
+.brand p{ margin:0; font-size:10px; color:#9fb3a3; font-family:var(--font-mono); letter-spacing:.1em;}
+
+.nav{ padding:16px 10px; flex:1; overflow-y:auto; }
+.nav-group-label{
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:#7d9186; margin:18px 12px 7px; display:flex; align-items:center; gap:8px;
+}
+.nav-group-label::after{ content:""; flex:1; height:1px; background:rgba(242,234,214,.12); }
+.nav-group-label:first-child{ margin-top:2px; }
+.nav button{
+  width:100%; text-align:left; background:transparent; border:none; color:#dcd2b4;
+  padding:9.5px 12px; border-radius:3px; font-size:13px; display:flex; align-items:center; gap:11px;
+  margin-bottom:1px; transition:background .15s ease, color .15s ease; position:relative;
+}
+.nav button .ico{ width:17px; text-align:center; opacity:.8; font-size:15px; display:inline-flex;}
+.nav button:hover{ background:rgba(242,234,214,.07); color:#f2ead6; }
+.nav button.active{ background:rgba(242,234,214,.13); color:#fff; font-weight:600; }
+.nav button.active .ico{ opacity:1; color:var(--brass-light); }
+.nav button.active::before{
+  content:""; position:absolute; left:0; top:7px; bottom:7px; width:3px; background:var(--brass-light); border-radius:2px;
+}
+.nav .count{
+  margin-left:auto; font-family:var(--font-mono); font-size:10px; background:rgba(0,0,0,.22);
+  padding:1px 7px; border-radius:9px; color:#c9bd9e; letter-spacing:.02em;
+}
+.nav .badge-admin{ margin-left:auto; font-family:var(--font-mono); font-size:8.5px; letter-spacing:.06em; text-transform:uppercase; background:var(--brass); color:#2a1e08; padding:1px 6px; border-radius:8px; }
+
+.sidebar-footer{
+  padding:15px 20px; border-top:1px dashed rgba(242,234,214,.22);
+  font-family:var(--font-mono); font-size:10px; color:#82977f; line-height:1.7; letter-spacing:.02em;
+}
+
+/* ---- Main ---- */
+.main{ flex:1; min-width:0; padding:26px 32px 60px; }
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  margin-bottom:24px; flex-wrap:wrap; padding-bottom:18px; border-bottom:1px dashed var(--card-line);
+}
+.topbar h2{ margin:0; font-size:23px; color:var(--green); font-weight:400; }
+.topbar .sub{ font-family:var(--font-mono); font-size:11px; color:var(--ink-soft); margin-top:5px; letter-spacing:.01em; }
+.topbar-actions{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.notif-dot{
+  position:absolute; top:6px; right:6px; width:8px; height:8px; border-radius:50%;
+  background:var(--stamp-red); border:1.5px solid var(--card); animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot{ 0%,100%{ box-shadow:0 0 0 0 rgba(140,47,34,.4);} 50%{ box-shadow:0 0 0 4px rgba(140,47,34,0);} }
+.user-chip{ display:flex; align-items:center; gap:9px; padding-left:12px; border-left:1px dashed var(--card-line); }
+.user-avatar{
+  width:34px; height:34px; border-radius:50%; background:var(--green); color:#f8f2e2;
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:11.5px;
+  font-weight:600; flex-shrink:0; border:2px solid var(--brass-light);
+}
+.user-avatar.guest{ background:var(--kraft-dark); color:var(--ink-soft); border-color:var(--card-line); }
+.user-meta{ display:flex; flex-direction:column; line-height:1.3; }
+.user-meta strong{ font-size:12px; color:var(--ink); font-weight:600; }
+.user-meta span{ font-size:10px; color:var(--ink-soft); font-family:var(--font-mono); }
+@media (max-width:620px){ .user-meta{ display:none; } .user-chip{ border-left:none; padding-left:0; } }
+
+.menu-toggle{ display:none; }
+
+/* ===================== BUTTONS ===================== */
+.btn{
+  border:1px solid var(--ink); background:var(--card); color:var(--ink);
+  padding:9px 16px; font-size:12.5px; border-radius:var(--radius); letter-spacing:.01em;
+  display:inline-flex; align-items:center; gap:7px; box-shadow:var(--shadow-soft);
+  transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.btn svg.ic{ font-size:14px; }
+.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
+.btn:active{ transform:translateY(0); }
+.btn-primary{ background:var(--green); border-color:var(--green); color:#f8f2e2; }
+.btn-primary:hover{ background:var(--green-light); }
+.btn-brass{ background:var(--brass); border-color:var(--brass); color:#fff; }
+.btn-danger{ background:transparent; border-color:var(--stamp-red); color:var(--stamp-red); box-shadow:none; }
+.btn-danger:hover{ background:rgba(140,47,34,.07); }
+.btn-ghost{ background:transparent; box-shadow:none; border-color:var(--card-line); color:var(--ink-soft); }
+.btn-sm{ padding:6px 11px; font-size:11.5px; }
+.btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+.btn-icon-only{ padding:8px 10px; font-size:15px; }
+
+/* ===================== DASHBOARD ===================== */
+.stat-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:18px; margin-bottom:28px;
+}
+.stat-card{
+  background:
+    radial-gradient(circle at 18px 18px, rgba(42,35,26,.14) 0 2.5px, transparent 3px),
+    var(--card);
+  border:1px solid var(--card-line); border-radius:var(--radius);
+  padding:20px 20px 18px 34px; position:relative; box-shadow:var(--shadow); overflow:hidden;
+  border-top:3px solid var(--stat-color, var(--brass));
+  transition:transform .18s ease, box-shadow .18s ease;
+}
+.stat-card:hover{ transform:translateY(-2px); box-shadow:0 1px 0 rgba(42,35,26,.1), 0 16px 30px -16px rgba(42,35,26,.5); }
+.stat-card::before{
+  content:""; position:absolute; left:10px; top:8px; bottom:8px; width:1px;
+  background:repeating-linear-gradient(0deg, var(--card-line) 0 4px, transparent 4px 8px);
+}
+.stat-card::after{
+  content:""; position:absolute; right:14px; top:14px; width:9px; height:9px; border-radius:50%;
+  background:var(--stat-color, var(--brass)); box-shadow:0 0 0 3px color-mix(in srgb, var(--stat-color, var(--brass)) 18%, transparent);
+}
+.stat-card .label{ font-family:var(--font-mono); font-size:10px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); }
+.stat-card .value{ font-family:var(--font-display); font-size:36px; margin-top:8px; color:var(--green); line-height:1; }
+.stat-card .delta{ font-size:11.5px; margin-top:9px; color:var(--ink-soft); font-style:italic; }
+.stat-card.warn .value{ color:var(--stamp-red); }
+
+/* ---- Ficha de atualização (signature element) ---- */
+.update-card{
+  background:var(--card); border:1px solid var(--card-line); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:18px 20px; margin-bottom:24px;
+  display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap;
+  position:relative; overflow:hidden;
+}
+.update-card .left{ display:flex; align-items:center; gap:16px; }
+.update-card .stamp-ring{
+  width:64px; height:64px; border-radius:50%; border:2.5px solid var(--stamp-red); color:var(--stamp-red);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; transform:rotate(-9deg);
+  font-family:var(--font-mono); flex-shrink:0; opacity:.88; position:relative;
+}
+.update-card .stamp-ring::before{
+  content:""; position:absolute; inset:5px; border:1px solid var(--stamp-red); border-radius:50%; opacity:.5;
+}
+.update-card .stamp-ring .d{ font-size:15px; font-weight:600; line-height:1; }
+.update-card .stamp-ring .m{ font-size:7.5px; letter-spacing:.1em; text-transform:uppercase; margin-top:2px;}
+.update-card h3{ margin:0 0 4px; font-size:14.5px; color:var(--green); }
+.update-card p{ margin:0; font-size:12px; color:var(--ink-soft); font-family:var(--font-mono); }
+.update-card .right{ display:flex; gap:10px; flex-wrap:wrap; }
+
+.home-search{
+  background:
+    radial-gradient(circle at 92% 18%, rgba(201,159,79,.2), transparent 28%),
+    linear-gradient(135deg, var(--green) 0%, var(--green-light) 100%);
+  color:#f8f2e2; border-radius:var(--radius); padding:28px 30px 23px; margin-bottom:28px;
+  box-shadow:0 1px 0 rgba(42,35,26,.15), 0 18px 34px -18px rgba(23,48,31,.75); position:relative; overflow:hidden;
+}
+.home-search::before{ content:""; position:absolute; inset:12px; border:1px solid rgba(248,242,226,.12); pointer-events:none; }
+.home-search::after{ content:"ACERVO · CONSULTA RÁPIDA"; position:absolute; right:22px; bottom:15px; font:9px var(--font-mono); letter-spacing:.14em; color:rgba(248,242,226,.45); }
+.home-search .eyebrow{ color:var(--brass-light); }
+.home-search h3{ margin:7px 0 5px; font-size:24px; }
+.home-search p{ margin:0 0 17px; font:12px/1.55 var(--font-mono); color:#c9bd9e; max-width:580px; }
+.home-search-bar{ display:flex; gap:9px; max-width:720px; position:relative; z-index:1; }
+.home-search-bar .field{ flex:1; min-width:0; background:#fffdf8; border-color:#fffdf8; padding:11px 13px; }
+.home-search-bar .btn{ padding:10px 17px; }
+.home-search-results{ display:grid; gap:7px; margin-top:12px; max-width:720px; position:relative; z-index:1; }
+.home-result{ display:flex; align-items:center; gap:12px; padding:9px 12px; background:rgba(248,242,226,.1); border:1px solid rgba(248,242,226,.2); color:#f8f2e2; text-align:left; border-radius:var(--radius); }
+.home-result:hover{ background:rgba(248,242,226,.17); }
+.home-result .result-icon{ color:var(--brass-light); font-size:18px; }
+.home-result strong{ display:block; font-size:13px; font-weight:600; }
+.home-result span{ display:block; margin-top:2px; color:#c9bd9e; font:10px var(--font-mono); }
+.home-result .status{ margin-left:auto; font:9px var(--font-mono); text-transform:uppercase; letter-spacing:.06em; color:#b9d2b5; }
+.home-search-empty{ color:#c9bd9e; font:11px var(--font-mono); padding:7px 0; }
+
+.dashboard-intro{
+  display:flex; align-items:center; justify-content:space-between; gap:24px; margin:4px 0 20px;
+  padding:4px 2px 0; animation:fadeIn .25s ease;
+}
+.dashboard-intro h3{ margin:5px 0 5px; color:var(--green); font-size:25px; line-height:1.2; }
+.dashboard-intro p{ margin:0; max-width:650px; color:var(--ink-soft); font:12px/1.6 var(--font-mono); }
+.dashboard-intro-mark{
+  width:84px; height:84px; flex-shrink:0; border:1px solid var(--brass); color:var(--brass);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; transform:rotate(4deg);
+  background:rgba(250,245,231,.48); box-shadow:4px 4px 0 rgba(150,104,42,.12);
+}
+.dashboard-intro-mark span{ font:24px var(--font-display); line-height:1; }
+.dashboard-intro-mark small{ margin-top:7px; font:8px var(--font-mono); letter-spacing:.12em; }
+@media (max-width:560px){ .dashboard-intro{ align-items:flex-start; } .dashboard-intro-mark{ width:64px; height:64px; } .dashboard-intro-mark span{ font-size:18px; } .dashboard-intro h3{ font-size:21px; } }
+
+.login-intro{ display:grid; grid-template-columns:84px 1fr; gap:15px; align-items:center; margin-bottom:20px; padding-bottom:17px; border-bottom:1px dashed var(--card-line); }
+.login-seal{ width:74px; height:74px; border:1px solid var(--brass); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--brass); font:20px var(--font-display); transform:rotate(-7deg); }
+.login-intro h4{ margin:0 0 5px; font-size:17px; color:var(--green); }
+.login-intro p{ margin:0; color:var(--ink-soft); font-size:12px; line-height:1.5; }
+.login-demo{ margin-top:16px; padding:11px 12px; border-left:3px solid var(--brass); background:var(--brass-pale); font-size:11px; line-height:1.55; color:var(--ink-soft); }
+.login-demo strong{ color:var(--ink); }
+@media (max-width:560px){ .home-search{ padding:20px 18px 18px; } .home-search-bar{ flex-direction:column; } .home-search-bar .btn{ justify-content:center; } .home-search::after{ display:none; } .login-intro{ grid-template-columns:62px 1fr; } .login-seal{ width:58px; height:58px; font-size:16px; } }
+
+.dash-grid{ display:grid; grid-template-columns:1.4fr 1fr; gap:20px; }
+@media (max-width:1000px){ .dash-grid{ grid-template-columns:1fr; } }
+
+.panel{
+  background:var(--card); border:1px solid var(--card-line); border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.panel-head{
+  padding:14px 18px; border-bottom:1px dashed var(--card-line);
+  display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(180deg, rgba(42,35,26,.025), transparent);
+}
+.panel-head h3{ margin:0; font-size:13.5px; color:var(--green); display:flex; align-items:center; gap:8px; font-weight:400;}
+.panel-body{ padding:16px 18px; }
+
+.mini-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(205,189,148,.5); font-size:13px;}
+.mini-row:last-child{ border-bottom:none; }
+.mini-row .tag{ font-family:var(--font-mono); font-size:10px; }
+
+/* ===================== TABLES / FICHAS ===================== */
+.toolbar{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px;
+}
+.field{
+  background:var(--card); border:1px solid var(--card-line); border-radius:var(--radius);
+  padding:8px 10px; font-size:13px; color:var(--ink);
+}
+.field:focus{ outline:2px solid var(--brass); outline-offset:1px; }
+.search-field{ flex:1; min-width:180px; }
+
+.table-wrap{ overflow-x:auto; background:var(--card); border:1px solid var(--card-line); border-radius:var(--radius); box-shadow:var(--shadow); }
+table{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
+thead th{
+  text-align:left; font-family:var(--font-mono); font-size:10px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--ink-soft); padding:13px 14px; border-bottom:2px solid var(--card-line); white-space:nowrap;
+  background:linear-gradient(180deg, rgba(42,35,26,.03), transparent);
+}
+tbody td{ padding:12px 14px; border-bottom:1px solid rgba(203,185,140,.45); vertical-align:middle; }
+tbody tr{ transition:background .12s ease; }
+tbody tr:hover{ background:rgba(150,104,42,.06); }
+tbody tr:last-child td{ border-bottom:none; }
+.row-actions{ display:flex; gap:6px; }
+.book-title-cell{ display:flex; align-items:center; gap:11px; }
+.cover-thumb{
+  width:32px; height:46px; object-fit:cover; border:1px solid var(--card-line); background:var(--kraft-dark);
+  flex-shrink:0; border-radius:1px; box-shadow:1px 1px 0 rgba(42,35,26,.15);
+}
+.cover-thumb.placeholder{
+  display:flex; align-items:center; justify-content:center; color:var(--ink-soft); opacity:.55;
+  background:repeating-linear-gradient(135deg, var(--kraft-dark) 0 3px, var(--card) 3px 6px);
+}
+.cover-thumb.placeholder svg{ width:14px; height:14px; }
+
+/* Stamp badges — carimbo de tinta */
+.stamp{
+  display:inline-flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:9.5px;
+  letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border:1.5px solid; border-radius:2px;
+  transform:rotate(-2deg); font-weight:600; position:relative; background:transparent;
+  box-shadow: inset 0 0 0 1px currentColor; opacity:.92;
+}
+.stamp::before{
+  content:""; position:absolute; inset:-2px; border:1px solid currentColor; border-radius:2px; opacity:.35;
+  transform:rotate(1deg);
+}
+.stamp-ok{ color:var(--ok); }
+.stamp-out{ color:var(--brass); }
+.stamp-late{ color:var(--stamp-red); transform:rotate(2deg); }
+.stamp-admin{ color:var(--stamp-red); transform:rotate(2deg); }
+
+.empty-state{ text-align:center; padding:50px 20px; color:var(--ink-soft); }
+.empty-state .ico{ font-size:30px; margin-bottom:10px; }
+
+/* ===================== VESTIBULAR BOOK CARDS ===================== */
+.vest-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(266px,1fr)); gap:18px; }
+.vest-card{
+  background:var(--card); border:1px solid var(--card-line); border-radius:var(--radius);
+  box-shadow:var(--shadow-soft); padding:18px; display:flex; flex-direction:column; gap:11px; position:relative;
+  transition:transform .16s ease, box-shadow .16s ease;
+}
+.vest-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow); }
+.vest-card::before{
+  content:""; position:absolute; left:0; top:16px; bottom:16px; width:3px; background:var(--brass-light); border-radius:0 2px 2px 0; opacity:.7;
+}
+.vest-card .exam-badges{ display:flex; gap:5px; flex-wrap:wrap; }
+.exam-badge{
+  font-family:var(--font-mono); font-size:9px; padding:2px 7px; border-radius:2px; border:1px solid var(--green);
+  color:var(--green); letter-spacing:.05em; background:var(--green-pale);
+}
+.vest-card h4{ margin:0; font-size:15.5px; color:var(--ink); line-height:1.32;}
+.vest-card .author{ font-size:12px; color:var(--ink-soft); font-style:italic; margin-top:-6px;}
+.vest-card .themes{ font-size:12.5px; color:var(--ink-soft); line-height:1.55; flex:1; }
+.vest-card .themes strong{ color:var(--ink); font-weight:600; font-style:normal; }
+.speak-btn{
+  align-self:flex-start; background:var(--green); color:#f8f2e2; border:none; border-radius:20px;
+  padding:8px 15px; font-size:11.8px; display:flex; align-items:center; gap:9px; box-shadow:var(--shadow-soft);
+  transition:transform .12s ease, background .15s ease; letter-spacing:.01em;
+}
+.speak-btn:hover{ transform:translateY(-1px); background:var(--green-light); }
+.speak-btn.speaking{ background:var(--stamp-red); }
+.speak-btn .wave{ display:inline-flex; gap:2px; align-items:flex-end; height:12px; }
+.speak-btn .wave span{ width:2px; background:#f8f2e2; height:4px; border-radius:1px; }
+.speak-btn.speaking .wave span{ animation:wv .8s infinite ease-in-out; }
+.speak-btn .wave span:nth-child(2){ animation-delay:.15s; }
+.speak-btn .wave span:nth-child(3){ animation-delay:.3s; }
+@keyframes wv{ 0%,100%{ height:4px;} 50%{ height:12px;} }
+
+.vest-toolbar{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;}
+.vest-hero{
+  background:
+    radial-gradient(circle at 88% -10%, rgba(201,159,79,.18), transparent 55%),
+    linear-gradient(135deg, var(--green) 0%, var(--green-light) 100%);
+  color:#f8f2e2;
+  border-radius:var(--radius); padding:24px 26px; margin-bottom:22px; display:flex; gap:22px; align-items:center;
+  justify-content:space-between; flex-wrap:wrap; box-shadow:var(--shadow); position:relative; overflow:hidden;
+}
+.vest-hero .eyebrow{ color:var(--brass-light); }
+.vest-hero h3{ margin:8px 0 8px; font-size:19px; font-weight:400; }
+.vest-hero p{ margin:0; font-size:12.5px; color:#c9bd9e; max-width:520px; line-height:1.65; font-family:var(--font-mono);}
+
+.topic-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px; }
+.topic-card{
+  background:var(--card); border:1px solid var(--card-line); border-radius:var(--radius);
+  padding:14px 14px 13px; text-align:left; box-shadow:var(--shadow-soft); cursor:pointer;
+  display:flex; flex-direction:column; gap:6px; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.topic-card:hover{ transform:translateY(-2px); box-shadow:var(--shadow); }
+.topic-card.active{ border-color:var(--green); background:var(--green-pale); }
+.topic-card .t-ico{ color:var(--brass); width:20px; height:20px; }
+.topic-card.active .t-ico{ color:var(--green); }
+.topic-card strong{ font-size:13px; color:var(--ink); font-weight:600; }
+.topic-card span{ font-size:10.5px; color:var(--ink-soft); line-height:1.4; font-family:var(--font-mono); }
+
+/* ===================== MODAL ===================== */
+.overlay{
+  position:fixed; inset:0; background:rgba(43,38,32,.55); display:none; align-items:center; justify-content:center;
+  z-index:100; padding:20px;
+}
+.overlay.show{ display:flex; }
+.modal{
+  background:var(--card); width:100%; max-width:560px; max-height:88vh; overflow-y:auto;
+  border-radius:var(--radius); border:1px solid var(--card-line); box-shadow:0 20px 50px rgba(0,0,0,.35);
+  position:relative;
+}
+.modal.wide{ max-width:720px; }
+.modal{ box-shadow:0 24px 60px rgba(0,0,0,.4), 0 0 0 1px rgba(42,35,26,.05); }
+.modal-head{
+  padding:18px 22px; border-bottom:2px solid var(--green); display:flex; justify-content:space-between; align-items:center;
+  position:sticky; top:0; background:var(--card); z-index:2;
+}
+.modal-head h3{ margin:0; font-size:16px; color:var(--green); font-weight:400; }
+.modal-close{ background:none; border:none; font-size:20px; color:var(--ink-soft); line-height:1; }
+.modal-body{ padding:20px 22px; }
+.modal-foot{ padding:16px 22px; border-top:1px dashed var(--card-line); display:flex; justify-content:flex-end; gap:10px; }
+
+.form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.form-grid .full{ grid-column:1 / -1; }
+.form-group label{ display:block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:5px;}
+.form-group input, .form-group select, .form-group textarea{
+  width:100%; padding:9px 10px; border:1px solid var(--card-line); border-radius:var(--radius); background:#fffdf8; font-size:13.5px;
+}
+.form-group textarea{ resize:vertical; min-height:70px; }
+@media (max-width:560px){ .form-grid{ grid-template-columns:1fr; } }
+
+/* ===================== TOASTS ===================== */
+.toast-wrap{ position:fixed; bottom:20px; right:20px; display:flex; flex-direction:column; gap:10px; z-index:200; }
+.toast{
+  background:var(--green); color:#f8f2e2; padding:12px 16px; border-radius:var(--radius); font-size:12.5px;
+  box-shadow:0 10px 25px rgba(0,0,0,.3); display:flex; align-items:center; gap:10px; min-width:240px;
+  border-left:4px solid var(--brass-light); animation:slidein .25s ease;
+}
+.toast.error{ border-left-color:var(--stamp-red); }
+@keyframes slidein{ from{ transform:translateX(30px); opacity:0;} to{ transform:translateX(0); opacity:1;} }
+
+/* ===================== MISC ===================== */
+.badge-count{ font-family:var(--font-mono); font-size:10px; background:var(--kraft-dark); padding:2px 6px; border-radius:10px; color:var(--ink-soft);}
+.pill-select{ display:flex; gap:6px; flex-wrap:wrap; }
+.pill-select button{
+  border:1px solid var(--card-line); background:var(--card); padding:6px 12px; font-size:11.5px; border-radius:16px; color:var(--ink-soft);
+}
+.pill-select button.active{ background:var(--green); border-color:var(--green); color:#f8f2e2; }
+
+footer.credit{ text-align:center; margin-top:40px; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-soft); }
+
+/* Responsive */
+@media (max-width:880px){
+  .sidebar{ position:fixed; left:0; top:0; transform:translateX(-100%); transition:transform .25s ease; box-shadow:0 0 40px rgba(0,0,0,.4); }
+  .sidebar.open{ transform:translateX(0); }
+  .menu-toggle{ display:inline-flex; }
+  .main{ padding:18px 16px 50px; }
+  .form-grid{ grid-template-columns:1fr; }
+}
+.sidebar-scrim{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:39; }
+.sidebar-scrim.show{ display:block; }
+
+.section{ display:none; animation:fadeIn .2s ease; }
+.section.active{ display:block; }
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(4px);} to{ opacity:1; transform:translateY(0);} }
+
+.helper{ font-size:11px; color:var(--ink-soft); margin-top:4px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="sidebar-scrim" id="scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="stamp-badge">
+        <svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="20.5" stroke="currentColor" stroke-width="1.4" fill="none"/><circle cx="23" cy="23" r="16.5" stroke="currentColor" stroke-width="1" fill="none" stroke-dasharray="2 2"/><text x="23" y="20" text-anchor="middle" font-family="'Special Elite',monospace" font-size="10.5" fill="currentColor">MB</text><text x="23" y="31" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="5" letter-spacing="1" fill="currentColor">BIBLIOTECA</text></svg>
+      </div>
+      <div>
+        <h1>Biblioteca<br>Monsenhor Bicudo</h1>
+        <p>SISTEMA DE GESTÃO · v1.2</p>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-group-label">Visão geral</div>
+      <button data-section="dashboard" class="active"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span> Dashboard</button>
+
+      <div class="nav-group-label">Acervo</div>
+      <button data-section="livros"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H12v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M12 3h6.5A1.5 1.5 0 0 1 20 4.5v15a1.5 1.5 0 0 1-1.5 1.5H12"/><path d="M12 3v18"/></svg></span> Livros <span class="count" id="cnt-livros">0</span></button>
+
+      <div class="nav-group-label">Circulação</div>
+      <button data-section="emprestimos"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a2 2 0 0 1 2-2h16"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a2 2 0 0 1-2 2H3"/></svg></span> Empréstimos <span class="count" id="cnt-emprestimos">0</span></button>
+      <button data-section="historico"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span> Histórico</button>
+
+      <div class="nav-group-label">Preparatório</div>
+      <button data-section="vestibular"><span class="ico"><svg class="ic" viewBox="0 0 24 24"><path d="M2 8l10-4 10 4-10 4z"/><path d="M6 10.5V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-5.5"/><path d="M22 8v6"/></svg></span> Vestibular</button>
+
+      <div class="nav-group-label" data-admin-only>Administração</div>
+      <button data-section="cadastro" data-admin-only><span class="ico"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg></span> Cadastro <span class="badge-admin">Admin</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      Escola · Ensino Fundamental II ao Médio<br>
+      Ficha catalográfica digital
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="btn btn-icon-only menu-toggle" id="menuToggle"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <div>
+          <h2 id="pageTitle">Dashboard</h2>
+          <div class="sub" id="pageSub">Painel geral do acervo — atualizado em tempo real</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div id="topbarActions" style="display:flex; gap:10px;"></div>
+        <button class="btn btn-icon-only" id="notifBtn" title="Notificações" style="position:relative;">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="notif-dot" id="notifDot" style="display:none;"></span>
+        </button>
+        <div class="user-chip">
+          <div class="user-avatar guest" id="userAvatar">?</div>
+          <div class="user-meta"><strong id="userName">Visitante</strong><span id="userRole">Usuário comum</span></div>
+        </div>
+        <button class="btn btn-sm btn-primary" id="loginBtn">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg> Login administrador
+        </button>
+        <button class="btn btn-sm btn-ghost hidden" id="logoutBtn">
+          <svg class="ic" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg> Sair
+        </button>
+      </div>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="section active" id="sec-dashboard">
+      <div class="dashboard-intro">
+        <div>
+          <div class="eyebrow">Biblioteca Monsenhor Bicudo · painel geral</div>
+          <h3>Conhecimento ao alcance de todos.</h3>
+          <p>Um acervo organizado para apoiar a aprendizagem, a pesquisa e as novas descobertas da comunidade escolar.</p>
+        </div>
+        <div class="dashboard-intro-mark" aria-label="Biblioteca Monsenhor Bicudo">
+          <span>MB</span>
+          <small>ACERVO</small>
+        </div>
+      </div>
+      <div class="home-search">
+        <div class="eyebrow">Consulta aberta ao acervo</div>
+        <h3>Encontre sua próxima leitura</h3>
+        <p>Pesquise por título, autor ou categoria e veja rapidamente o que está disponível.</p>
+        <div class="home-search-bar">
+          <input class="field" id="homeSearch" placeholder="Ex.: Machado de Assis, literatura..." autocomplete="off">
+          <button class="btn btn-brass" id="homeSearchBtn"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg> Pesquisar</button>
+        </div>
+        <div class="home-search-results" id="homeSearchResults" aria-live="polite"></div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card" style="--stat-color:#1f3a2e"><div class="label">Títulos cadastrados</div><div class="value" id="st-titulos">0</div><div class="delta">Livros distintos no acervo</div></div>
+        <div class="stat-card" style="--stat-color:#a9782f"><div class="label">Disponíveis agora</div><div class="value" id="st-disponiveis">0</div><div class="delta">Prontos para empréstimo</div></div>
+        <div class="stat-card" style="--stat-color:#2f6b3f"><div class="label">Empréstimos ativos</div><div class="value" id="st-ativos">0</div><div class="delta">Em circulação neste momento</div></div>
+        <div class="stat-card" style="--stat-color:#9a3324" data-admin-only><div class="label">Usuários cadastrados</div><div class="value" id="st-usuarios">0</div><div class="delta">Contas com acesso ao sistema</div></div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="panel">
+          <div class="panel-head"><h3>Últimas movimentações</h3><span class="badge-count" id="hist-count">0 registros</span></div>
+          <div class="panel-body" id="dash-historico"><div class="empty-state">Nenhuma movimentação ainda.</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Livros emprestados no momento</h3></div>
+          <div class="panel-body" id="dash-emprestados"><div class="empty-state">Nenhum livro emprestado. ✓</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LIVROS ============ -->
+    <section class="section" id="sec-livros">
+      <div class="toolbar">
+        <input class="field search-field" id="livrosSearch" placeholder="Buscar por título, autor, categoria...">
+        <select class="field" id="livrosFiltroCategoria">
+          <option value="">Todas as categorias</option>
+        </select>
+        <select class="field" id="livrosFiltroStatus">
+          <option value="">Qualquer status</option>
+          <option value="disponivel">Disponível</option>
+          <option value="emprestado">Emprestado</option>
+        </select>
+        <button class="btn btn-primary" id="livrosNovoBtn" data-admin-only>
+          <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Novo livro
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>ID_livro</th><th>Nome_livro</th><th>Categoria</th><th>Autor</th><th>PK_Emprestimo</th><th></th>
+          </tr></thead>
+          <tbody id="livrosTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ EMPRÉSTIMOS ============ -->
+    <section class="section" id="sec-emprestimos">
+      <div class="toolbar">
+        <input class="field search-field" id="emprestimosSearch" placeholder="Buscar por livro, autor ou sala...">
+        <select class="field" id="emprestimosFiltroStatus">
+          <option value="">Qualquer status</option>
+          <option value="ativo">Ativo</option>
+          <option value="devolvido">Devolvido</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID_Emprestimo</th><th>Livro</th><th>Autores</th><th>Data_pegou</th><th>Data_devolucao</th><th>Sala</th><th>Quantd.Livro</th><th>Status</th><th></th></tr></thead>
+          <tbody id="emprestimosTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ HISTÓRICO ============ -->
+    <section class="section" id="sec-historico">
+      <div class="toolbar">
+        <input class="field search-field" id="historicoSearch" placeholder="Buscar no histórico...">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Tipo</th><th>Livro</th><th>Sala</th><th>Detalhe</th></tr></thead>
+          <tbody id="historicoTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ VESTIBULAR ============ -->
+    <section class="section" id="sec-vestibular">
+      <div class="vest-hero">
+        <div>
+          <div class="eyebrow">Ficha de estudo · leitura em voz alta</div>
+          <h3>Assistente sonoro de relevância no vestibular</h3>
+          <p>Toque em "ouvir análise" em qualquer título para uma leitura em voz alta sobre a probabilidade de incidência
+          em FUVEST, UNICAMP, ENEM e UNESP, e os principais temas cobrados sobre a obra.</p>
+        </div>
+        <button class="btn btn-brass" id="stopSpeechBtn"><svg class="ic" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M2 2l20 20"/></svg> Parar leitura</button>
+      </div>
+
+      <div class="eyebrow" style="margin-bottom:10px;">Radar por área do conhecimento</div>
+      <div class="topic-grid" id="topicGrid"></div>
+
+      <div class="vest-toolbar">
+        <input class="field search-field" id="vestSearch" placeholder="Buscar título ou autor...">
+        <div class="pill-select" id="vestExamFilter">
+          <button data-exam="" class="active">Todas as provas</button>
+          <button data-exam="FUVEST">FUVEST</button>
+          <button data-exam="UNICAMP">UNICAMP</button>
+          <button data-exam="ENEM">ENEM</button>
+          <button data-exam="UNESP">UNESP</button>
+        </div>
+      </div>
+      <div class="vest-grid" id="vestGrid"></div>
+    </section>
+
+    <!-- ============ CADASTRO (LOGIN / ACESSO) — ADMIN ============ -->
+    <section class="section" id="sec-cadastro">
+      <div class="toolbar">
+        <input class="field search-field" id="cadastroSearch" placeholder="Buscar por nome ou R.A....">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>R.A.</th><th>Senha</th><th>Acesso</th><th></th></tr></thead>
+          <tbody id="cadastroTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="credit">Sistema de Gestão da Biblioteca Monsenhor Bicudo — desenvolvido para uso interno e apresentação acadêmica.</footer>
+  </main>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ============ MODAL GENÉRICO ============ -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Título</h3>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===================== UTIL ===================== */
+const $ = (sel, ctx=document) => ctx.querySelector(sel);
+const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+const uid = (p='id') => p + '_' + Math.random().toString(36).slice(2,9);
+const todayISO = () => new Date().toISOString().slice(0,10);
+function fmtDate(iso){ if(!iso) return '—'; const d = new Date(iso+'T00:00:00'); return d.toLocaleDateString('pt-BR'); }
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function toast(msg, type='ok'){
+  const wrap = $('#toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type==='error' ? ' error' : '');
+  el.innerHTML = (type==='error' ? '&#9888; ' : '&#10003; ') + escapeHtml(msg);
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3200);
+}
+
+/* ===================== ESTADO / PERSISTÊNCIA ===================== */
+const STORAGE_KEY = 'bmb_biblioteca_v1';
+let state = null;
+
+/*
+  Estrutura de dados, conforme pedido:
+  users  -> Nome, R.A., Senha, Acesso (1 = admin, 0 = usuário comum)
+  books  -> ID_livro, Nome_livro, Categoria, Autor, pkEmprestimo (id do empréstimo ativo ou null)
+  loans  -> ID_Emprestimo, Autores, Data_pegou, Data_devolucao, Sala, Quantidade de livros
+*/
+function seedData(){
+  const users = [
+    { id: uid('usr'), name:'Administração da Biblioteca', ra:'adm@escola.com.edu', password:'12345UU', access:1 },
+  ];
+
+  const bk = (title, category, author, vest) => ({
+    id: uid('bk'), title, category, author, pkEmprestimo: null, vestibular: vest||null
+  });
+
+  const books = [
+    bk('Dom Casmurro','Literatura Brasileira','Machado de Assis',
+      { exams:['FUVEST','UNICAMP','ENEM'], topic:'literatura', themes:'narrador não confiável, ciúme, subjetividade da memória, condição da mulher no século XIX' }),
+    bk('Memórias Póstumas de Brás Cubas','Literatura Brasileira','Machado de Assis',
+      { exams:['FUVEST','UNICAMP'], topic:'literatura', themes:'realismo, narrador defunto, crítica social, ironia machadiana' }),
+    bk('Iracema','Literatura Brasileira','José de Alencar',
+      { exams:['FUVEST','UNESP'], topic:'literatura', themes:'indianismo, formação da identidade nacional, romantismo, mito fundador do Brasil' }),
+    bk('Vidas Secas','Literatura Brasileira','Graciliano Ramos',
+      { exams:['FUVEST','UNICAMP','ENEM','UNESP'], topic:'literatura', themes:'seca, migração, linguagem enxuta, desumanização, regionalismo de 30' }),
+    bk('A Hora da Estrela','Literatura Brasileira','Clarice Lispector',
+      { exams:['UNICAMP','ENEM'], topic:'literatura', themes:'existencialismo, invisibilidade social, metaficção, migração nordestina' }),
+    bk('Ensaio sobre a Cegueira','Literatura Estrangeira','José Saramago',
+      { exams:['UNICAMP','ENEM'], topic:'filosofia', themes:'alegoria, colapso civilizatório, ética coletiva, condição humana' }),
+    bk('1984','Literatura Estrangeira','George Orwell',
+      { exams:['ENEM','UNICAMP'], topic:'atualidades', themes:'totalitarismo, vigilância, manipulação da linguagem, liberdade individual' }),
+    bk('Grande Sertão: Veredas','Literatura Brasileira','Guimarães Rosa',
+      { exams:['FUVEST','UNICAMP'], topic:'literatura', themes:'linguagem regional inventiva, dualidade bem/mal, sertão como universo, amor e identidade' }),
+    bk('O Cortiço','Literatura Brasileira','Aluísio Azevedo',
+      { exams:['FUVEST','UNICAMP','UNESP'], topic:'sociologia', themes:'naturalismo, determinismo social, coletividade, degradação urbana' }),
+    bk('Sapiens: Uma Breve História da Humanidade','História & Sociedade','Yuval Noah Harari',
+      { exams:['ENEM','UNICAMP'], topic:'historia', themes:'evolução humana, revolução agrícola, capitalismo, processos históricos de longa duração' }),
+  ];
+
+  const loans = [];
+  function makeLoan(idx, sala, qtd, diasAtras, devolvido){
+    const b = books[idx];
+    const loan = {
+      id: uid('emp'), bookId: b.id, authors: b.author,
+      pickupDate: new Date(Date.now() - diasAtras*86400000).toISOString().slice(0,10),
+      returnDate: devolvido ? todayISO() : null,
+      room: sala, quantity: qtd
+    };
+    loans.push(loan);
+    b.pkEmprestimo = devolvido ? null : loan.id;
+  }
+  makeLoan(0, '9º A', 1, 4, false);
+  makeLoan(3, '2º EM B', 1, 12, false);
+  makeLoan(6, '1º EM A', 2, 20, true);
+
+  return { users, books, loans };
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ console.warn('Falha ao carregar estado salvo, recriando dados de exemplo.', e); }
+  const seeded = seedData();
+  saveStateRaw(seeded);
+  return seeded;
+}
+function saveStateRaw(s){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }catch(e){ console.warn(e); } }
+function saveState(){ saveStateRaw(state); }
+
+state = loadState();
+
+/* ===================== SESSÃO / LOGIN DO ADMINISTRADOR ===================== */
+/* Não há tela de login separada: o site abre direto no Dashboard (usuário comum, valor 0).
+   Um botão no topo abre um modal simples de login; ao validar, currentUser vira o
+   registro do administrador (valor 1) e as opções de cadastro deixam de ficar invisíveis. */
+const SESSION_KEY = 'bmb_sessao_v1';
+let currentUser = null;
+
+function findUser(identifier, password){
+  const idNorm = (identifier||'').trim().toLowerCase();
+  return state.users.find(u => u.ra.toLowerCase() === idNorm && u.password === password);
+}
+function isAdmin(){ return !!(currentUser && Number(currentUser.access) === 1); }
+
+function restoreSession(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return false;
+    const { userId } = JSON.parse(raw);
+    const u = state.users.find(x=>x.id===userId);
+    if(!u) return false;
+    currentUser = u;
+    return true;
+  }catch(e){ return false; }
+}
+function persistSession(){ try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify({ userId: currentUser.id })); }catch(e){} }
+function clearSession(){ try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){} }
+
+function renderUserChip(){
+  if(currentUser){
+    const initials = currentUser.name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+    $('#userAvatar').textContent = initials;
+    $('#userAvatar').classList.remove('guest');
+    $('#userName').textContent = currentUser.name;
+    $('#userRole').textContent = isAdmin() ? 'Administrador' : 'Usuário comum';
+    $('#loginBtn').classList.add('hidden');
+    $('#logoutBtn').classList.remove('hidden');
+  } else {
+    $('#userAvatar').textContent = '?';
+    $('#userAvatar').classList.add('guest');
+    $('#userName').textContent = 'Visitante';
+    $('#userRole').textContent = 'Usuário comum';
+    $('#loginBtn').classList.remove('hidden');
+    $('#logoutBtn').classList.add('hidden');
+  }
+}
+
+/* IF usuario == valor1 (admin): pode cadastrar. ELSE: fica invisível. */
+function applyRoleVisibility(){
+  $$('[data-admin-only]').forEach(el=>{ el.style.display = isAdmin() ? '' : 'none'; });
+  const activeSection = $('.section.active');
+  if(activeSection && activeSection.id === 'sec-cadastro' && !isAdmin()){ goSection('dashboard'); }
+}
+
+function openLoginModal(){
+  openModal({
+    title: 'Acesso administrativo',
+    bodyHtml: `
+      <div class="login-intro"><div class="login-seal">MB</div><div><h4>Área reservada</h4><p>Entre para gerenciar livros, empréstimos, usuários e dados da biblioteca.</p></div></div>
+      <div class="form-group full"><label>Usuário (e-mail ou R.A.)</label><input id="f-login-user" placeholder="Ex: adm@escola.com.edu" autocomplete="username"></div>
+      <div class="form-group full"><label>Senha</label><input id="f-login-pass" type="password" placeholder="Digite sua senha" autocomplete="current-password"></div>
+      <div class="helper" id="loginModalError" style="color:var(--stamp-red); display:none;">Usuário ou senha inválidos.</div>
+      <div class="login-demo"><strong>Acesso de demonstração</strong><br>Usuário: adm@escola.com.edu<br>Senha: 12345UU</div>`,
+    footButtons: [
+      {label:'Cancelar', cls:'btn-ghost', onClick: closeModal},
+      {label:'Entrar', cls:'btn-primary', onClick: ()=>{
+        const found = findUser($('#f-login-user').value, $('#f-login-pass').value);
+        if(!found){ $('#loginModalError').style.display = 'block'; return; }
+        currentUser = found;
+        persistSession();
+        renderUserChip();
+        applyRoleVisibility();
+        closeModal();
+        toast('Login realizado como ' + found.name + '.');
+        renderAll();
+      }}
+    ]
+  });
+}
+$('#loginBtn').addEventListener('click', openLoginModal);
+$('#logoutBtn').addEventListener('click', ()=>{
+  currentUser = null;
+  clearSession();
+  renderUserChip();
+  applyRoleVisibility();
+  goSection('dashboard');
+  toast('Sessão de administrador encerrada.');
+});
+$('#notifBtn').addEventListener('click', ()=>{
+  $('#notifDot').style.display = 'none';
+  toast('Nenhuma notificação nova.');
+});
+
+/* ===================== DERIVADOS ===================== */
+function bookById(id){ return state.books.find(b=>b.id===id); }
+function loanById(id){ return state.loans.find(l=>l.id===id); }
+function bookStatus(book){ return book.pkEmprestimo ? 'emprestado' : 'disponivel'; }
+
+function renderHomeSearch(query=''){
+  const wrap = $('#homeSearchResults');
+  const term = query.trim().toLowerCase();
+  if(!term){ wrap.innerHTML = ''; return; }
+  const matches = state.books.filter(book => [book.title, book.author, book.category].some(value => value.toLowerCase().includes(term))).slice(0,4);
+  if(!matches.length){ wrap.innerHTML = '<div class="home-search-empty">Nenhum título encontrado. Tente outro termo.</div>'; return; }
+  wrap.innerHTML = matches.map(book => `
+    <button class="home-result" data-book-id="${book.id}">
+      <span class="result-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H12v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M12 3h6.5A1.5 1.5 0 0 1 20 4.5v15a1.5 1.5 0 0 1-1.5 1.5H12"/></svg></span>
+      <span><strong>${escapeHtml(book.title)}</strong><span>${escapeHtml(book.author)} · ${escapeHtml(book.category)}</span></span>
+      <span class="status">${bookStatus(book)==='disponivel' ? 'Disponível' : 'Emprestado'}</span>
+    </button>`).join('');
+  $$('.home-result', wrap).forEach(result => result.addEventListener('click', ()=>{
+    $('#livrosSearch').value = result.querySelector('strong').textContent;
+    goSection('livros');
+    renderLivros();
+  }));
+}
+
+$('#homeSearch').addEventListener('input', event => renderHomeSearch(event.target.value));
+$('#homeSearchBtn').addEventListener('click', ()=> renderHomeSearch($('#homeSearch').value));
+$('#homeSearch').addEventListener('keydown', event => { if(event.key === 'Enter') renderHomeSearch(event.target.value); });
+
+/* ===================== NAVEGAÇÃO ===================== */
+const sectionTitles = {
+  dashboard: ['Dashboard','Painel geral do acervo — atualizado em tempo real'],
+  livros: ['Livros','ID_livro, Nome_livro, Categoria e status de empréstimo (PK_Emprestimo)'],
+  emprestimos: ['Empréstimos','ID_Emprestimo, Autores, datas, sala e quantidade de livros'],
+  historico: ['Histórico','Registro de todas as movimentações'],
+  vestibular: ['Preparatório para o Vestibular','Relevância das obras em FUVEST, UNICAMP, ENEM e UNESP'],
+  cadastro: ['Cadastro','Nome, R.A., Senha e Acesso (1 = administrador, 0 = usuário comum)'],
+};
+
+function goSection(name){
+  if(name === 'cadastro' && !isAdmin()){ toast('Apenas administradores podem acessar o cadastro.','error'); return; }
+  $$('.section').forEach(s=>s.classList.remove('active'));
+  $('#sec-'+name).classList.add('active');
+  $$('.nav button[data-section]').forEach(b=>b.classList.toggle('active', b.dataset.section===name));
+  $('#pageTitle').textContent = sectionTitles[name][0];
+  $('#pageSub').textContent = sectionTitles[name][1];
+  renderTopbarActions(name);
+  renderSection(name);
+  $('#sidebar').classList.remove('open');
+  $('#scrim').classList.remove('show');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+$$('.nav button[data-section]').forEach(btn=>{
+  btn.addEventListener('click', ()=> goSection(btn.dataset.section));
+});
+
+$('#menuToggle').addEventListener('click', ()=>{
+  $('#sidebar').classList.add('open');
+  $('#scrim').classList.add('show');
+});
+$('#scrim').addEventListener('click', ()=>{
+  $('#sidebar').classList.remove('open');
+  $('#scrim').classList.remove('show');
+});
+
+function renderTopbarActions(name){
+  const wrap = $('#topbarActions'); wrap.innerHTML = '';
+  if(!isAdmin()) return; // cadastrar só aparece para o administrador (acesso = 1)
+  const actions = {
+    livros: [['+ Novo livro', ()=>openBookForm()]],
+    emprestimos: [['+ Novo empréstimo', ()=>openLoanForm()]],
+    cadastro: [['+ Novo usuário', ()=>openUserForm()]],
+  };
+  (actions[name]||[]).forEach(([label, fn])=>{
+    const b = document.createElement('button');
+    b.className = 'btn btn-primary'; b.textContent = label; b.onclick = fn;
+    wrap.appendChild(b);
+  });
+}
+
+/* ===================== MODAL HELPERS ===================== */
+function openModal({title, bodyHtml, footButtons, wide}){
+  $('#modalTitle').textContent = title;
+  $('#modalBody').innerHTML = bodyHtml;
+  $('#modal').classList.toggle('wide', !!wide);
+  const foot = $('#modalFoot'); foot.innerHTML = '';
+  (footButtons||[]).forEach(fb=>{
+    const b = document.createElement('button');
+    b.className = 'btn ' + (fb.cls||'');
+    b.textContent = fb.label;
+    b.onclick = fb.onClick;
+    foot.appendChild(b);
+  });
+  $('#overlay').classList.add('show');
+}
+function closeModal(){ $('#overlay').classList.remove('show'); }
+$('#modalClose').addEventListener('click', closeModal);
+$('#overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeModal(); });
+
+/* ===================== CADASTRO (usuários / login) ===================== */
+function openUserForm(existing){
+  if(!isAdmin()) return;
+  const isEdit = !!existing;
+  openModal({
+    title: isEdit ? 'Editar cadastro' : 'Novo cadastro',
+    bodyHtml: `
+      <div class="form-grid">
+        <div class="form-group full"><label>Nome</label><input id="f-usr-nome" value="${escapeHtml(existing?.name||'')}"></div>
+        <div class="form-group full"><label>R.A. (ou e-mail, usado no login)</label><input id="f-usr-ra" value="${escapeHtml(existing?.ra||'')}"></div>
+        <div class="form-group"><label>Senha</label><input id="f-usr-senha" value="${escapeHtml(existing?.password||'')}"></div>
+        <div class="form-group">
+          <label>Acesso</label>
+          <select id="f-usr-acesso">
+            <option value="0" ${(!existing || Number(existing.access)===0) ? 'selected':''}>Usuário comum (0)</option>
+            <option value="1" ${existing && Number(existing.access)===1 ? 'selected':''}>Administrador (1)</option>
+          </select>
+        </div>
+      </div>`,
+    footButtons: [
+      {label:'Cancelar', cls:'btn-ghost', onClick: closeModal},
+      {label: isEdit ? 'Salvar alterações' : 'Cadastrar', cls:'btn-primary', onClick: ()=>{
+        const name = $('#f-usr-nome').value.trim();
+        const ra = $('#f-usr-ra').value.trim();
+        const password = $('#f-usr-senha').value.trim();
+        if(!name || !ra || !password){ toast('Preencha nome, R.A. e senha.','error'); return; }
+        const dup = state.users.find(u=> u.ra.toLowerCase()===ra.toLowerCase() && u.id !== existing?.id);
+        if(dup){ toast('Já existe um cadastro com este R.A./e-mail.','error'); return; }
+        const data = { name, ra, password, access: Number($('#f-usr-acesso').value) };
+        if(isEdit){ Object.assign(existing, data); if(currentUser && currentUser.id===existing.id) currentUser = existing; toast('Cadastro atualizado.'); }
+        else{ state.users.push({ id: uid('usr'), ...data }); toast('Cadastro realizado.'); }
+        saveState(); closeModal(); renderAll();
+      }}
+    ]
+  });
+}
+function deleteUser(user){
+  if(!isAdmin()) return;
+  if(user.id === currentUser.id){ toast('Você não pode excluir o próprio usuário logado.','error'); return; }
+  const admins = state.users.filter(u=>Number(u.access)===1);
+  if(Number(user.access)===1 && admins.length<=1){ toast('Deve existir ao menos um administrador cadastrado.','error'); return; }
+  if(!confirm(`Excluir o cadastro de "${user.name}"?`)) return;
+  state.users = state.users.filter(u=>u.id!==user.id);
+  saveState(); toast('Cadastro excluído.'); renderAll();
+}
+
+/* ===================== CRUD: LIVROS ===================== */
+const TOPICOS_VEST = [
+  { id:'literatura', label:'Literatura', desc:'Romances, contos, poesia' },
+  { id:'historia', label:'História', desc:'Processos e memória histórica' },
+  { id:'sociologia', label:'Sociologia', desc:'Sociedade e desigualdade' },
+  { id:'filosofia', label:'Filosofia', desc:'Pensamento crítico e ética' },
+  { id:'atualidades', label:'Atualidades', desc:'Temas contemporâneos' },
+];
+const CATEGORIAS_LIVROS = [
+  'Literatura Brasileira',
+  'Literatura Estrangeira',
+  'História',
+  'Geografia',
+  'Filosofia',
+  'Sociologia',
+  'Ciências',
+  'Matemática',
+  'Artes',
+  'Tecnologia',
+];
+
+function getBookCategories(){
+  return [...new Set([
+    ...CATEGORIAS_LIVROS,
+    ...state.books.map(book => book.category).filter(Boolean),
+  ])].sort((a,b)=>a.localeCompare(b, 'pt-BR'));
+}
+
+function renderBookCategoryFilters(){
+  const filter = $('#livrosFiltroCategoria');
+  if(!filter) return;
+  const current = filter.value;
+  filter.innerHTML = '<option value="">Todas as categorias</option>' +
+    getBookCategories().map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
+  filter.value = current;
+}
+
+function openBookForm(existing){
+  if(!isAdmin()) return;
+  const isEdit = !!existing;
+  const vest = existing?.vestibular || {};
+  const category = existing?.category || '';
+  const isCustomCategory = category && !CATEGORIAS_LIVROS.includes(category);
+  const categoryOptions = getBookCategories().map(item =>
+    `<option value="${escapeHtml(item)}" ${item===category ? 'selected' : ''}>${escapeHtml(item)}</option>`
+  ).join('');
+  openModal({
+    wide:true,
+    title: isEdit ? 'Editar livro' : 'Novo livro',
+    bodyHtml: `
+      <div class="form-grid">
+        <div class="form-group full"><label>Nome_livro</label><input id="f-bk-title" value="${escapeHtml(existing?.title||'')}"></div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="f-bk-category">
+            <option value="">Não informar</option>
+            ${categoryOptions}
+            <option value="__outra__" ${isCustomCategory ? 'selected' : ''}>Outra categoria</option>
+          </select>
+          <input id="f-bk-category-custom" class="field hidden" style="width:100%; margin-top:7px;" placeholder="Digite a categoria" value="${isCustomCategory ? escapeHtml(category) : ''}">
+        </div>
+        <div class="form-group"><label>Autor</label><input id="f-bk-author" value="${escapeHtml(existing?.author||'')}"></div>
+        <div class="form-group"><label>Área (radar do vestibular)</label>
+          <select id="f-bk-topic">
+            <option value="">Não informar</option>
+            ${TOPICOS_VEST.map(t=>`<option value="${t.id}" ${vest.topic===t.id?'selected':''}>${t.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label>Provas relevantes</label><input id="f-bk-exams" placeholder="FUVEST, UNICAMP, ENEM, UNESP" value="${escapeHtml((vest.exams||[]).join(', '))}"></div>
+        <div class="form-group full"><label>Temas cobrados</label><textarea id="f-bk-themes">${escapeHtml(vest.themes||'')}</textarea></div>
+      </div>
+      <div class="helper">O campo PK_Emprestimo é preenchido automaticamente ao registrar ou devolver um empréstimo.</div>`,
+    footButtons: [
+      {label:'Cancelar', cls:'btn-ghost', onClick: closeModal},
+      {label: isEdit ? 'Salvar alterações' : 'Cadastrar livro', cls:'btn-primary', onClick: ()=>{
+        const title = $('#f-bk-title').value.trim();
+        if(!title){ toast('Informe o nome do livro.','error'); return; }
+        const selectedCategory = $('#f-bk-category').value;
+        const category = selectedCategory === '__outra__'
+          ? $('#f-bk-category-custom').value.trim()
+          : selectedCategory;
+        if(selectedCategory === '__outra__' && !category){ toast('Informe o nome da categoria.','error'); return; }
+        const exams = $('#f-bk-exams').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
+        const topic = $('#f-bk-topic').value;
+        const themes = $('#f-bk-themes').value.trim();
+        const vestibular = (topic || exams.length || themes) ? { topic, exams, themes } : null;
+        const data = { title, category, author: $('#f-bk-author').value.trim(), vestibular };
+        if(isEdit){ Object.assign(existing, data); toast('Livro atualizado.'); }
+        else{ state.books.push({ id: uid('bk'), pkEmprestimo:null, ...data }); toast('Livro cadastrado.'); }
+        saveState(); closeModal(); renderAll();
+      }}
+    ]
+  });
+  const categorySelect = $('#f-bk-category');
+  const customCategory = $('#f-bk-category-custom');
+  const updateCustomCategory = () => customCategory.classList.toggle('hidden', categorySelect.value !== '__outra__');
+  categorySelect.addEventListener('change', updateCustomCategory);
+  updateCustomCategory();
+}
+function deleteBook(book){
+  if(!isAdmin()) return;
+  if(book.pkEmprestimo){ toast('Não é possível excluir: o livro está emprestado.','error'); return; }
+  if(!confirm(`Excluir o livro "${book.title}"?`)) return;
+  state.books = state.books.filter(b=>b.id!==book.id);
+  state.loans = state.loans.filter(l=>l.bookId!==book.id);
+  saveState(); toast('Livro excluído.'); renderAll();
+}
+
+/* ===================== CRUD: EMPRÉSTIMOS ===================== */
+function openLoanForm(){
+  if(!isAdmin()) return;
+  const disponiveis = state.books.filter(b=>!b.pkEmprestimo);
+  if(disponiveis.length===0){ toast('Não há livros disponíveis para empréstimo.','error'); return; }
+  openModal({
+    title:'Novo empréstimo',
+    bodyHtml: `
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Livro</label>
+          <select id="f-emp-book">${disponiveis.map(b=>`<option value="${b.id}" data-author="${escapeHtml(b.author)}">${escapeHtml(b.title)}</option>`).join('')}</select>
+        </div>
+        <div class="form-group full"><label>Autores</label><input id="f-emp-authors" value="${escapeHtml(disponiveis[0].author||'')}"></div>
+        <div class="form-group"><label>Data_pegou</label><input id="f-emp-pegou" type="date" value="${todayISO()}"></div>
+        <div class="form-group"><label>Data_devolucao (opcional)</label><input id="f-emp-devolucao" type="date"></div>
+        <div class="form-group"><label>Sala</label><input id="f-emp-sala" placeholder="Ex: 9º A"></div>
+        <div class="form-group"><label>Quantd.Livro</label><input id="f-emp-qtd" type="number" min="1" value="1"></div>
+      </div>`,
+    footButtons: [
+      {label:'Cancelar', cls:'btn-ghost', onClick: closeModal},
+      {label:'Confirmar empréstimo', cls:'btn-primary', onClick: ()=>{
+        const bookId = $('#f-emp-book').value;
+        const room = $('#f-emp-sala').value.trim();
+        const quantity = parseInt($('#f-emp-qtd').value)||1;
+        if(!room){ toast('Informe a sala.','error'); return; }
+        const loan = {
+          id: uid('emp'), bookId, authors: $('#f-emp-authors').value.trim(),
+          pickupDate: $('#f-emp-pegou').value || todayISO(),
+          returnDate: $('#f-emp-devolucao').value || null,
+          room, quantity
+        };
+        state.loans.push(loan);
+        const book = bookById(bookId);
+        book.pkEmprestimo = loan.id;
+        saveState(); toast('Empréstimo registrado.'); closeModal(); renderAll();
+      }}
+    ]
+  });
+  $('#f-emp-book').addEventListener('change', function(){
+    const opt = this.selectedOptions[0];
+    $('#f-emp-authors').value = opt ? opt.dataset.author : '';
+  });
+}
+function returnLoan(loan){
+  if(!isAdmin()) return;
+  if(!confirm('Confirmar devolução deste livro?')) return;
+  loan.returnDate = todayISO();
+  const book = bookById(loan.bookId);
+  if(book) book.pkEmprestimo = null;
+  saveState(); toast('Devolução registrada.'); renderAll();
+}
+function deleteLoan(loan){
+  if(!isAdmin()) return;
+  if(!loan.returnDate){ toast('Registre a devolução antes de excluir o empréstimo.','error'); return; }
+  if(!confirm('Excluir este registro de empréstimo?')) return;
+  state.loans = state.loans.filter(l=>l.id!==loan.id);
+  saveState(); toast('Registro excluído.'); renderAll();
+}
+
+/* ===================== RENDER: DASHBOARD ===================== */
+const MESES_ABREV = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+function renderDashboard(){
+  const totalTitulos = state.books.length;
+  const disponiveis = state.books.filter(b=>!b.pkEmprestimo).length;
+  const ativos = state.loans.filter(l=>!l.returnDate).length;
+
+  $('#st-titulos').textContent = totalTitulos;
+  $('#st-disponiveis').textContent = disponiveis;
+  $('#st-ativos').textContent = ativos;
+  $('#st-usuarios').textContent = state.users.length;
+
+  const moves = [];
+  state.loans.forEach(l=>{
+    moves.push({ date: l.pickupDate, type:'Empréstimo', loan:l });
+    if(l.returnDate) moves.push({ date: l.returnDate, type:'Devolução', loan:l });
+  });
+  moves.sort((a,b)=> b.date.localeCompare(a.date));
+  const dashHist = $('#dash-historico');
+  $('#hist-count').textContent = moves.length + ' registros';
+  if(moves.length===0){ dashHist.innerHTML = '<div class="empty-state">Nenhuma movimentação ainda.</div>'; }
+  else{
+    dashHist.innerHTML = moves.slice(0,6).map(m=>{
+      const b = bookById(m.loan.bookId);
+      return `<div class="mini-row"><span>${m.type==='Empréstimo'?'&#8594;':'&#8592;'} <strong>${escapeHtml(b?b.title:'—')}</strong> — ${escapeHtml(m.loan.room)}</span><span class="tag mono">${fmtDate(m.date)}</span></div>`;
+    }).join('');
+  }
+
+  const emprestados = state.loans.filter(l=>!l.returnDate);
+  const dashEmp = $('#dash-emprestados');
+  if(emprestados.length===0){ dashEmp.innerHTML = '<div class="empty-state">Nenhum livro emprestado. ✓</div>'; }
+  else{
+    dashEmp.innerHTML = emprestados.map(l=>{
+      const b = bookById(l.bookId);
+      return `<div class="mini-row"><span><strong>${escapeHtml(b?b.title:'—')}</strong> — ${escapeHtml(l.room)}</span><span class="tag mono">${fmtDate(l.pickupDate)}</span></div>`;
+    }).join('');
+  }
+}
+
+/* ===================== RENDER: LIVROS ===================== */
+function renderLivros(){
+  const term = ($('#livrosSearch').value||'').toLowerCase();
+  const filtroCategoria = $('#livrosFiltroCategoria').value;
+  const filtroStatus = $('#livrosFiltroStatus').value;
+  renderBookCategoryFilters();
+  const tbody = $('#livrosTbody'); tbody.innerHTML = '';
+  const rows = state.books.filter(b=>{
+    const status = bookStatus(b);
+    if(filtroCategoria && b.category!==filtroCategoria) return false;
+    if(filtroStatus && status!==filtroStatus) return false;
+    if(term && !(b.title.toLowerCase().includes(term) || (b.category||'').toLowerCase().includes(term) || (b.author||'').toLowerCase().includes(term))) return false;
+    return true;
+  });
+  if(rows.length===0){ tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">Nenhum livro encontrado.</div></td></tr>`; }
+  else{
+    rows.forEach(b=>{
+      const status = bookStatus(b);
+      const stampHtml = status==='disponivel' ? `<span class="stamp stamp-ok">Disponível</span>` : `<span class="stamp stamp-out">Emprestado</span>`;
+      tbody.innerHTML += `<tr>
+        <td class="mono">${escapeHtml(b.id.slice(-6))}</td>
+        <td class="book-title-cell"><div class="cover-thumb placeholder"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H12v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M12 3h6.5A1.5 1.5 0 0 1 20 4.5v15a1.5 1.5 0 0 1-1.5 1.5H12"/></svg></div>${escapeHtml(b.title)}</td>
+        <td>${escapeHtml(b.category||'—')}</td>
+        <td>${escapeHtml(b.author||'—')}</td>
+        <td>${stampHtml}</td>
+        <td class="row-actions" data-admin-only>
+          <button class="btn btn-sm" onclick="__editBook('${b.id}')">Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="__deleteBook('${b.id}')">Excluir</button>
+        </td>
+      </tr>`;
+    });
+  }
+  $('#cnt-livros').textContent = state.books.length;
+  applyRoleVisibility();
+}
+window.__editBook = id => openBookForm(bookById(id));
+window.__deleteBook = id => deleteBook(bookById(id));
+
+/* ===================== RENDER: EMPRÉSTIMOS ===================== */
+function renderEmprestimos(){
+  const term = ($('#emprestimosSearch').value||'').toLowerCase();
+  const filtroStatus = $('#emprestimosFiltroStatus').value;
+  const tbody = $('#emprestimosTbody'); tbody.innerHTML = '';
+  const rows = state.loans.filter(l=>{
+    const status = l.returnDate ? 'devolvido' : 'ativo';
+    if(filtroStatus && status!==filtroStatus) return false;
+    const b = bookById(l.bookId);
+    if(term && !((b?.title||'').toLowerCase().includes(term) || (l.authors||'').toLowerCase().includes(term) || (l.room||'').toLowerCase().includes(term))) return false;
+    return true;
+  }).sort((a,b)=> b.pickupDate.localeCompare(a.pickupDate));
+  if(rows.length===0){ tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state">Nenhum empréstimo encontrado.</div></td></tr>`; }
+  else{
+    rows.forEach(l=>{
+      const b = bookById(l.bookId);
+      const status = l.returnDate ? 'devolvido' : 'ativo';
+      const stampHtml = status==='ativo' ? `<span class="stamp stamp-out">Ativo</span>` : `<span class="stamp stamp-ok">Devolvido</span>`;
+      tbody.innerHTML += `<tr>
+        <td class="mono">${escapeHtml(l.id.slice(-6))}</td>
+        <td>${escapeHtml(b?b.title:'—')}</td>
+        <td>${escapeHtml(l.authors||'—')}</td>
+        <td class="mono">${fmtDate(l.pickupDate)}</td>
+        <td class="mono">${fmtDate(l.returnDate)}</td>
+        <td>${escapeHtml(l.room)}</td>
+        <td>${l.quantity}</td>
+        <td>${stampHtml}</td>
+        <td class="row-actions" data-admin-only>
+          ${!l.returnDate ? `<button class="btn btn-sm btn-primary" onclick="__returnLoan('${l.id}')">Devolver</button>` : ''}
+          <button class="btn btn-sm btn-danger" onclick="__deleteLoan('${l.id}')">Excluir</button>
+        </td>
+      </tr>`;
+    });
+  }
+  $('#cnt-emprestimos').textContent = state.loans.length;
+  applyRoleVisibility();
+}
+window.__returnLoan = id => returnLoan(loanById(id));
+window.__deleteLoan = id => deleteLoan(loanById(id));
+
+/* ===================== RENDER: HISTÓRICO ===================== */
+function renderHistorico(){
+  const term = ($('#historicoSearch').value||'').toLowerCase();
+  const tbody = $('#historicoTbody'); tbody.innerHTML = '';
+  const moves = [];
+  state.loans.forEach(l=>{
+    const b = bookById(l.bookId);
+    moves.push({ date:l.pickupDate, tipo:'Empréstimo', livro:b?b.title:'—', sala:l.room, detalhe:`Quantidade: ${l.quantity}` });
+    if(l.returnDate) moves.push({ date:l.returnDate, tipo:'Devolução', livro:b?b.title:'—', sala:l.room, detalhe:'Livro devolvido' });
+  });
+  moves.sort((a,b)=> b.date.localeCompare(a.date));
+  const filtered = moves.filter(m=> !term || m.livro.toLowerCase().includes(term) || m.sala.toLowerCase().includes(term));
+  if(filtered.length===0){ tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">Nenhum registro encontrado.</div></td></tr>`; }
+  else{
+    filtered.forEach(m=>{
+      tbody.innerHTML += `<tr><td class="mono">${fmtDate(m.date)}</td><td>${escapeHtml(m.tipo)}</td><td>${escapeHtml(m.livro)}</td><td>${escapeHtml(m.sala)}</td><td>${escapeHtml(m.detalhe)}</td></tr>`;
+    });
+  }
+}
+
+/* ===================== RENDER: VESTIBULAR ===================== */
+let vestActiveTopic = '';
+let vestActiveExam = '';
+const TOPIC_ICONS = {
+  literatura: `<path d="M4 4.5C4 3.7 4.7 3 5.5 3H12v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M12 3h6.5A1.5 1.5 0 0 1 20 4.5v15a1.5 1.5 0 0 1-1.5 1.5H12"/>`,
+  historia: `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>`,
+  sociologia: `<circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><circle cx="17" cy="9" r="2.3"/><path d="M15.5 13.2c2.6.4 4.5 2.3 4.5 4.8"/>`,
+  filosofia: `<circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.7v.5"/><path d="M12 17h.01"/>`,
+  atualidades: `<path d="M4 19V9l8-5 8 5v10"/><path d="M9 19v-6h6v6"/>`,
+};
+function livrosComVestibular(){ return state.books.filter(b=>b.vestibular); }
+function renderTopicGrid(){
+  const grid = $('#topicGrid');
+  const counts = {};
+  livrosComVestibular().forEach(b=>{ const t=b.vestibular.topic; if(t) counts[t]=(counts[t]||0)+1; });
+  grid.innerHTML = TOPICOS_VEST.map(t=>`
+    <button class="topic-card ${vestActiveTopic===t.id?'active':''}" data-topic="${t.id}">
+      <svg class="ic t-ico" viewBox="0 0 24 24">${TOPIC_ICONS[t.id]||''}</svg>
+      <strong>${t.label}</strong>
+      <span>${t.desc} · ${counts[t.id]||0} título(s)</span>
+    </button>`).join('');
+  $$('.topic-card', grid).forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      vestActiveTopic = (vestActiveTopic === btn.dataset.topic) ? '' : btn.dataset.topic;
+      renderVestibular();
+    });
+  });
+}
+function renderVestGrid(){
+  const term = ($('#vestSearch').value||'').toLowerCase();
+  const grid = $('#vestGrid');
+  const rows = livrosComVestibular().filter(b=>{
+    if(vestActiveTopic && b.vestibular.topic !== vestActiveTopic) return false;
+    if(vestActiveExam && !(b.vestibular.exams||[]).includes(vestActiveExam)) return false;
+    if(term && !(b.title.toLowerCase().includes(term) || (b.author||'').toLowerCase().includes(term))) return false;
+    return true;
+  });
+  if(rows.length===0){ grid.innerHTML = `<div class="empty-state">Nenhum título com dados de vestibular para este filtro.</div>`; return; }
+  grid.innerHTML = rows.map(b=>`
+    <div class="vest-card">
+      <div class="exam-badges">${(b.vestibular.exams||[]).map(e=>`<span class="exam-badge">${escapeHtml(e)}</span>`).join('')}</div>
+      <h4>${escapeHtml(b.title)}</h4>
+      <div class="author">${escapeHtml(b.author||'')}</div>
+      <div class="themes"><strong>Temas cobrados:</strong> ${escapeHtml(b.vestibular.themes||'—')}</div>
+      <button class="speak-btn" data-id="${b.id}">
+        <span class="wave"><span></span><span></span><span></span></span> Ouvir análise
+      </button>
+    </div>`).join('');
+  $$('.speak-btn', grid).forEach(btn=>{ btn.addEventListener('click', ()=> falarSobreLivro(btn)); });
+}
+function renderVestibular(){ renderTopicGrid(); renderVestGrid(); }
+
+function pararLeitura(){
+  if('speechSynthesis' in window) window.speechSynthesis.cancel();
+  $$('.speak-btn.speaking').forEach(b=> b.classList.remove('speaking'));
+}
+function falarSobreLivro(btn){
+  const b = bookById(btn.dataset.id);
+  if(!b || !b.vestibular) return;
+  if(!('speechSynthesis' in window)){ toast('Seu navegador não suporta leitura em voz alta.','error'); return; }
+  const jaFalando = btn.classList.contains('speaking');
+  pararLeitura();
+  if(jaFalando) return;
+  const exams = (b.vestibular.exams||[]).join(', ') || 'nenhum vestibular específico mapeado';
+  const texto = `${b.title}, de ${b.author}. Esta obra tem relevância em: ${exams}. Os principais temas cobrados são: ${b.vestibular.themes || 'não informados'}.`;
+  const utt = new SpeechSynthesisUtterance(texto);
+  utt.lang = 'pt-BR';
+  utt.onend = () => btn.classList.remove('speaking');
+  utt.onerror = () => btn.classList.remove('speaking');
+  btn.classList.add('speaking');
+  window.speechSynthesis.speak(utt);
+}
+$('#stopSpeechBtn').addEventListener('click', pararLeitura);
+$('#vestSearch').addEventListener('input', renderVestGrid);
+$$('#vestExamFilter button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    vestActiveExam = btn.dataset.exam;
+    $$('#vestExamFilter button').forEach(b=>b.classList.toggle('active', b===btn));
+    renderVestGrid();
+  });
+});
+
+/* ===================== RENDER: CADASTRO ===================== */
+function renderCadastro(){
+  if(!isAdmin()) return;
+  const term = ($('#cadastroSearch').value||'').toLowerCase();
+  const tbody = $('#cadastroTbody'); tbody.innerHTML = '';
+  const rows = state.users.filter(u=> !term || u.name.toLowerCase().includes(term) || u.ra.toLowerCase().includes(term));
+  if(rows.length===0){ tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">Nenhum cadastro encontrado.</div></td></tr>`; }
+  else{
+    rows.forEach(u=>{
+      const stampHtml = Number(u.access)===1 ? `<span class="stamp stamp-admin">Admin (1)</span>` : `<span class="stamp stamp-ok">Usuário (0)</span>`;
+      tbody.innerHTML += `<tr>
+        <td>${escapeHtml(u.name)}</td>
+        <td class="mono">${escapeHtml(u.ra)}</td>
+        <td class="mono">${'•'.repeat(Math.min(u.password.length,10))}</td>
+        <td>${stampHtml}</td>
+        <td class="row-actions">
+          <button class="btn btn-sm" onclick="__editUser('${u.id}')">Editar</button>
+          <button class="btn btn-sm btn-danger" onclick="__deleteUser('${u.id}')">Excluir</button>
+        </td>
+      </tr>`;
+    });
+  }
+}
+window.__editUser = id => openUserForm(state.users.find(u=>u.id===id));
+window.__deleteUser = id => deleteUser(state.users.find(u=>u.id===id));
+
+/* ===================== ORQUESTRAÇÃO ===================== */
+function renderSection(name){
+  if(name==='dashboard') renderDashboard();
+  else if(name==='livros') renderLivros();
+  else if(name==='emprestimos') renderEmprestimos();
+  else if(name==='historico') renderHistorico();
+  else if(name==='vestibular') renderVestibular();
+  else if(name==='cadastro') renderCadastro();
+}
+function renderAll(){
+  const active = $('.section.active');
+  const name = active ? active.id.replace('sec-','') : 'dashboard';
+  renderDashboard();
+  renderSection(name);
+  $('#cnt-livros').textContent = state.books.length;
+  $('#cnt-emprestimos').textContent = state.loans.length;
+}
+
+['livrosSearch','livrosFiltroCategoria','livrosFiltroStatus'].forEach(id=> $('#'+id).addEventListener('input', renderLivros));
+$('#livrosNovoBtn').addEventListener('click', ()=>openBookForm());
+['emprestimosSearch','emprestimosFiltroStatus'].forEach(id=> $('#'+id).addEventListener('input', renderEmprestimos));
+$('#historicoSearch').addEventListener('input', renderHistorico);
+$('#cadastroSearch').addEventListener('input', renderCadastro);
+
+/* ===================== INICIALIZAÇÃO ===================== */
+restoreSession();
+renderUserChip();
+applyRoleVisibility();
+goSection('dashboard');
+
+})();
+</script>
+</body>
+</html>
