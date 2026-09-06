@@ -25,7 +25,7 @@ let state = null;
 /*
   Estrutura de dados, conforme pedido:
   users  -> Nome, R.A., Senha, Acesso (1 = admin, 0 = usuário comum)
-  books  -> ID_livro, Nome_livro, Categoria, Autor, pkEmprestimo (id do empréstimo ativo ou null)
+  books  -> ID_livro, Nome_livro, Categoria, Autor, Ano, disponibilidade, pkEmprestimo (id do empréstimo ativo ou null)
   loans  -> ID_Emprestimo, Autores, Data_pegou, Data_devolucao, Sala, Quantidade de livros
 */
 function seedData(){
@@ -34,7 +34,7 @@ function seedData(){
   ];
 
   const bk = (title, category, author, vest) => ({
-    id: uid('bk'), title, category, author, pkEmprestimo: null, vestibular: vest||null
+    id: uid('bk'), title, category, author, year:'', availability:'disponivel', pkEmprestimo: null, vestibular: vest||null
   });
 
   const books = [
@@ -92,6 +92,11 @@ function saveStateRaw(s){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(
 function saveState(){ saveStateRaw(state); }
 
 state = loadState();
+state.books.forEach(book => {
+  if(!book.availability) book.availability = book.pkEmprestimo ? 'emprestado' : 'disponivel';
+  if(!Object.prototype.hasOwnProperty.call(book, 'year')) book.year = '';
+});
+saveState();
 
 /* ===================== SESSÃO / LOGIN DO ADMINISTRADOR ===================== */
 /* Não há tela de login separada: o site abre direto no Dashboard (usuário comum, valor 0).
@@ -188,7 +193,7 @@ $('#notifBtn').addEventListener('click', ()=>{
 /* ===================== DERIVADOS ===================== */
 function bookById(id){ return state.books.find(b=>b.id===id); }
 function loanById(id){ return state.loans.find(l=>l.id===id); }
-function bookStatus(book){ return book.pkEmprestimo ? 'emprestado' : 'disponivel'; }
+function bookStatus(book){ return book.pkEmprestimo ? 'emprestado' : (book.availability || 'disponivel'); }
 
 function renderHomeSearch(query=''){
   const wrap = $('#homeSearchResults');
@@ -215,7 +220,7 @@ $('#homeSearch').addEventListener('keydown', event => { if(event.key === 'Enter'
 
 /* ===================== NAVEGAÇÃO ===================== */
 const sectionTitles = {
-  dashboard: ['Dashboard','Painel geral do acervo — atualizado em tempo real'],
+  dashboard: ['Home','Painel geral do acervo — atualizado em tempo real'],
   livros: ['Livros','ID_livro, Nome_livro, Categoria e status de empréstimo (PK_Emprestimo)'],
   emprestimos: ['Empréstimos','ID_Emprestimo, Autores, datas, sala e quantidade de livros'],
   historico: ['Histórico','Registro de todas as movimentações'],
@@ -382,6 +387,7 @@ function openBookForm(existing){
     bodyHtml: `
       <div class="form-grid">
         <div class="form-group full"><label>Nome_livro</label><input id="f-bk-title" value="${escapeHtml(existing?.title||'')}"></div>
+        <div class="form-group"><label>Ano da obra</label><input id="f-bk-year" type="number" min="0" max="9999" placeholder="Ex: 1899" value="${escapeHtml(existing?.year||'')}"></div>
         <div class="form-group">
           <label>Categoria</label>
           <select id="f-bk-category">
@@ -392,6 +398,13 @@ function openBookForm(existing){
           <input id="f-bk-category-custom" class="field hidden" style="width:100%; margin-top:7px;" placeholder="Digite a categoria" value="${isCustomCategory ? escapeHtml(category) : ''}">
         </div>
         <div class="form-group"><label>Autor</label><input id="f-bk-author" value="${escapeHtml(existing?.author||'')}"></div>
+        <div class="form-group"><label>Disponibilidade</label>
+          <select id="f-bk-availability">
+            <option value="disponivel" ${(existing?.availability||'disponivel')==='disponivel'?'selected':''}>Disponível</option>
+            <option value="emprestado" ${(existing?.availability||'disponivel')==='emprestado'?'selected':''}>Emprestado</option>
+          </select>
+          <div class="helper">Um empréstimo ativo sempre mantém o livro como emprestado.</div>
+        </div>
         <div class="form-group"><label>Área (radar do vestibular)</label>
           <select id="f-bk-topic">
             <option value="">Não informar</option>
@@ -412,11 +425,12 @@ function openBookForm(existing){
           ? $('#f-bk-category-custom').value.trim()
           : selectedCategory;
         if(selectedCategory === '__outra__' && !category){ toast('Informe o nome da categoria.','error'); return; }
+        const year = $('#f-bk-year').value.trim();
         const exams = $('#f-bk-exams').value.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
         const topic = $('#f-bk-topic').value;
         const themes = $('#f-bk-themes').value.trim();
         const vestibular = (topic || exams.length || themes) ? { topic, exams, themes } : null;
-        const data = { title, category, author: $('#f-bk-author').value.trim(), vestibular };
+        const data = { title, category, year, availability: $('#f-bk-availability').value, author: $('#f-bk-author').value.trim(), vestibular };
         if(isEdit){ Object.assign(existing, data); toast('Livro atualizado.'); }
         else{ state.books.push({ id: uid('bk'), pkEmprestimo:null, ...data }); toast('Livro cadastrado.'); }
         saveState(); closeModal(); renderAll();
@@ -441,7 +455,7 @@ function deleteBook(book){
 /* ===================== CRUD: EMPRÉSTIMOS ===================== */
 function openLoanForm(){
   if(!isAdmin()) return;
-  const disponiveis = state.books.filter(b=>!b.pkEmprestimo);
+  const disponiveis = state.books.filter(b=>!b.pkEmprestimo && bookStatus(b)==='disponivel');
   if(disponiveis.length===0){ toast('Não há livros disponíveis para empréstimo.','error'); return; }
   openModal({
     title:'Novo empréstimo',
@@ -473,6 +487,7 @@ function openLoanForm(){
         state.loans.push(loan);
         const book = bookById(bookId);
         book.pkEmprestimo = loan.id;
+        book.availability = 'emprestado';
         saveState(); toast('Empréstimo registrado.'); closeModal(); renderAll();
       }}
     ]
@@ -487,7 +502,7 @@ function returnLoan(loan){
   if(!confirm('Confirmar devolução deste livro?')) return;
   loan.returnDate = todayISO();
   const book = bookById(loan.bookId);
-  if(book) book.pkEmprestimo = null;
+  if(book){ book.pkEmprestimo = null; book.availability = 'disponivel'; }
   saveState(); toast('Devolução registrada.'); renderAll();
 }
 function deleteLoan(loan){
@@ -548,20 +563,21 @@ function renderLivros(){
     const status = bookStatus(b);
     if(filtroCategoria && b.category!==filtroCategoria) return false;
     if(filtroStatus && status!==filtroStatus) return false;
-    if(term && !(b.title.toLowerCase().includes(term) || (b.category||'').toLowerCase().includes(term) || (b.author||'').toLowerCase().includes(term))) return false;
+    if(term && !(b.title.toLowerCase().includes(term) || (b.category||'').toLowerCase().includes(term) || (b.author||'').toLowerCase().includes(term) || String(b.year||'').includes(term))) return false;
     return true;
   });
-  if(rows.length===0){ tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">Nenhum livro encontrado.</div></td></tr>`; }
+  if(rows.length===0){ tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Nenhum livro encontrado.</div></td></tr>`; }
   else{
     rows.forEach(b=>{
       const status = bookStatus(b);
-      const stampHtml = status==='disponivel' ? `<span class="stamp stamp-ok">Disponível</span>` : `<span class="stamp stamp-out">Emprestado</span>`;
+      const statusLabel = status==='disponivel' ? 'Disponível' : 'Emprestado';
       tbody.innerHTML += `<tr>
         <td class="mono">${escapeHtml(b.id.slice(-6))}</td>
         <td class="book-title-cell"><div class="cover-thumb placeholder"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4.5C4 3.7 4.7 3 5.5 3H12v18H5.5A1.5 1.5 0 0 1 4 19.5z"/><path d="M12 3h6.5A1.5 1.5 0 0 1 20 4.5v15a1.5 1.5 0 0 1-1.5 1.5H12"/></svg></div>${escapeHtml(b.title)}</td>
+        <td class="mono">${escapeHtml(b.year||'—')}</td>
         <td>${escapeHtml(b.category||'—')}</td>
         <td>${escapeHtml(b.author||'—')}</td>
-        <td>${stampHtml}</td>
+        <td><button class="btn btn-sm ${status==='disponivel' ? 'btn-primary' : 'btn-ghost'}" data-admin-only onclick="__toggleBookAvailability('${b.id}')">${statusLabel}</button></td>
         <td class="row-actions" data-admin-only>
           <button class="btn btn-sm" onclick="__editBook('${b.id}')">Editar</button>
           <button class="btn btn-sm btn-danger" onclick="__deleteBook('${b.id}')">Excluir</button>
@@ -573,6 +589,13 @@ function renderLivros(){
   applyRoleVisibility();
 }
 window.__editBook = id => openBookForm(bookById(id));
+window.__toggleBookAvailability = id => {
+  const book = bookById(id);
+  if(!book || !isAdmin()) return;
+  if(book.pkEmprestimo){ toast('Este livro possui um empréstimo ativo. Registre a devolução para deixá-lo disponível.','error'); return; }
+  book.availability = bookStatus(book)==='disponivel' ? 'emprestado' : 'disponivel';
+  saveState(); toast(book.availability==='disponivel' ? 'Livro marcado como disponível.' : 'Livro marcado como emprestado.'); renderAll();
+};
 window.__deleteBook = id => deleteBook(bookById(id));
 
 /* ===================== RENDER: EMPRÉSTIMOS ===================== */
